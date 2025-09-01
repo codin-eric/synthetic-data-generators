@@ -13,6 +13,7 @@ import random
 import math
 import pandas as pd
 import numpy as np
+import click
 
 
 RECORDS_PER_DAY = 100  # Number of records to generate per day
@@ -37,6 +38,8 @@ def log_weight(days):  # TODO: it would be nice to be able to change the shape o
     return np.log1p(days) / np.log1p(days.max())
 
 
+click.command()
+@click.option('--start_date', default=datetime.today().strftime('%Y-%m-%d'), help='Start date of the simulation in YYYY-MM-DD format')
 def simulate_daily_transactions(start_date=datetime.today().strftime('%Y-%m-%d')):  # Casting date to str to avoid multiple types:
     """Simulate daily transactions and save to CSV files. If historic files exist, gather max id and max date to
     continue the sequence and randomly with log distribution update counts in historic files.
@@ -118,3 +121,7 @@ def simulate_daily_transactions(start_date=datetime.today().strftime('%Y-%m-%d')
     df.to_csv(consolidated_file, index=False)
 
     return data_file
+
+
+if __name__ == "__main__":
+    simulate_daily_transactions()
