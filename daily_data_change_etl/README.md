@@ -29,14 +29,6 @@ The challenge is to keep your **data warehouse** up to date while handling these
   - How much time and cost are involved in building and supporting each approach?
 
 ---
-
-## Roadmap
-
-- Add a database implementation that executes inserts, updates, and deletes.  
-- Add support for delete operations.  
-
----
-
 ## Usage
 Check out [`etl.py`](etl.py) for a basic example of how to use the generator.
 
@@ -50,3 +42,20 @@ python generator.py --start_date 2025-09-01
 
 Note: --start_date will be ignored if a file already exists under the data/ folder.
 In that case, the generator resumes from the latest file to simulate daily changes.
+---
+
+## Data behavior
+The generator models daily sales using two **Gaussian functions**:
+ simulating rush hours and slower periods.
+
+![Gaussian distribution](images/daily_distribution.png)
+
+Historical changes follow a **Sigmoid distribution**,  
+so newer days experience more changes than older ones.
+
+![Sigmoid distribution](images/sigmoid_1.1.2.png)
+
+## Roadmap
+
+- Add a database implementation that executes inserts, updates, and deletes.  
+- Add support for delete operations.  
