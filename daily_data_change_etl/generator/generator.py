@@ -22,6 +22,9 @@ MAX_COUNT_RECORD = 100  # Maximum count value for each record
 GAUSEAN_PEAKS = [9, 17]  # Example peaks for Gaussian distribution
 GAUSEAN_SIGMA = 2.0  # Standard deviation for Gaussian distribution
 
+SIGMOID_L = 1 # Maximum value of the sigmoid function
+SIGMOID_K = 0.1  # Steepness of the curve
+
 FOLDER_NAME = "data"
 FILE_PREFIX = "data_"
 
@@ -30,12 +33,32 @@ DATA_FOLDER = ROOT_DIR / FOLDER_NAME
 
 
 def gaussean_weight(h):
+    """Gaussean weight function to simulate time of day distribution
+
+    Args:
+        h (int|float): point in the curve 
+
+    Returns:
+        flaot : weight at point h
+    """
     weight = sum(math.exp(-((h - peak) ** 2) / (2 * GAUSEAN_SIGMA ** 2)) for peak in GAUSEAN_PEAKS)
     return weight
 
 
-def log_weight(days):  # TODO: it would be nice to be able to change the shape of the log distribution
-    return np.log1p(days) / np.log1p(days.max())
+def sigmoid_weight(x, middle_point, max_value=SIGMOID_L, steepness=SIGMOID_K):
+    """Sigmoid function
+
+    Args:
+        x (int|float): point
+        middle_point (int|float, optional): middle point of the curve.
+        max_value (int, optional): curves maximum value. Defaults to SIGMOID_L.
+        stepness (int, optional): How fast the curve increases. Defaults to SIGMOID_K.
+
+    Returns:
+        float: sigmoid curve value at x 
+    """
+    weight = max_value / (1 + math.exp(-steepness*(x - middle_point)))
+    return weight
 
 
 click.command()
@@ -51,9 +74,6 @@ def simulate_daily_transactions(start_date=datetime.today().strftime('%Y-%m-%d')
         str: Path to the generated CSV file. 
     """
     start_date = datetime.strptime(start_date, "%Y-%m-%d")
-
-    # folder and file definition 
-    consolidated_file = DATA_FOLDER / "consolidated.csv"
 
     DATA_FOLDER.mkdir(parents=True, exist_ok=True)
 
@@ -73,9 +93,10 @@ def simulate_daily_transactions(start_date=datetime.today().strftime('%Y-%m-%d')
         start_date = df_history['date'].max() + timedelta(days=1) # next day after the last record in history
         start_date = start_date.replace(hour=0, minute=0, second=0, microsecond=0) # reset HMS to not have issues with the random time generation
         print(f"new max_date: {start_date}")
-        # change counts in the historic df with a log distribution
-        days = (df_history['date'] - df_history['date'].min()).dt.days + 1  # avoid log zero
-        weights = log_weight(days) 
+        # change counts in the historic df with a Sigmoid distribution
+        days = (df_history['date'] - df_history['date'].min()).dt.days
+        middle_point = df_history["date"].dt.day.unique().size / 2
+        weights = [sigmoid_weight(day, middle_point=middle_point) for day in days] 
 
         rng = np.random.default_rng()
         mask = rng.random(size=len(df_history)) < weights
