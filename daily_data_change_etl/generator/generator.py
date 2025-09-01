@@ -115,11 +115,6 @@ def simulate_daily_transactions(start_date=datetime.today().strftime('%Y-%m-%d')
     df_current_day = pd.DataFrame(records)
     df_current_day.to_csv(data_file, index=False)
 
-    #consolidate all dfs in one
-    dfs.append(df_current_day)
-    df = pd.concat(dfs, ignore_index=True)
-    df.to_csv(consolidated_file, index=False)
-
     return data_file
 
 
