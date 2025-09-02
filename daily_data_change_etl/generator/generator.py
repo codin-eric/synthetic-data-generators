@@ -4,9 +4,10 @@ and consolidates everything into one file so you can validate against your etl
 
 design choices:
 - I'm using pandas to consolidate and psudo-randomly change the data. If the dataset gets too large this will be a problem.
-- The historic change uses a log distribution to change the count of records so older days dont change too much while newer days can change more. 
+- The historic change uses a log distribution to change the count of records so older days dont change too much while newer days can change more.
 - I had the idea of using a gaussian distribution to simulate the time of day when the data is created but atm this doesnt add any value.
 """
+
 from datetime import datetime, timedelta
 from pathlib import Path
 import random
@@ -23,7 +24,11 @@ GAUSEAN_PEAKS = [9, 17]  # Example peaks for Gaussian distribution
 GAUSEAN_SIGMA = 2.0  # Standard deviation for Gaussian distribution
 
 SIGMOID_L = 1  # Maximum value of the sigmoid function
-SIGMOID_K = 0.1  # Steepness of the curve
+SIGMOID_K = 0.2  # Steepness of the curve
+SIGMOID_MIDDLE_POINT_DAYS = 30  # Ammount of days before max days to calculate Sigmoids middle point. This should modify aprox 2 months in the past
+SIGMOID_MIDDLE_POINT_MIN_DAYS = (
+    60  # Minimum days to set Sigmoids middle point. Before is SUM(days)/2
+)
 
 FOLDER_NAME = "data"
 FILE_PREFIX = "data_"
@@ -42,8 +47,7 @@ def gaussean_weight(h):
         flaot : weight at point h
     """
     weight = sum(
-        math.exp(-((h - peak) ** 2) / (2 * GAUSEAN_SIGMA**2))
-        for peak in GAUSEAN_PEAKS
+        math.exp(-((h - peak) ** 2) / (2 * GAUSEAN_SIGMA**2)) for peak in GAUSEAN_PEAKS
     )
     return weight
 
@@ -115,10 +119,15 @@ def simulate_daily_transactions(
         start_date = start_date.replace(
             hour=0, minute=0, second=0, microsecond=0
         )  # reset HMS to not have issues with the random time generation
-        print(f"new max_date: {start_date}")
+        # print(f"new max_date: {start_date}")
         # change counts in the historic df with a Sigmoid distribution
         days = (df_history["date"] - df_history["date"].min()).dt.days
-        middle_point = df_history["date"].dt.day.unique().size / 2
+        days_ammount = (df_history["date"].max() - df_history["date"].min()).days + 1
+        if days_ammount < SIGMOID_MIDDLE_POINT_MIN_DAYS:
+            middle_point = days_ammount / 2
+        else:
+            middle_point = days_ammount - SIGMOID_MIDDLE_POINT_DAYS
+
         weights = [sigmoid_weight(day, middle_point=middle_point) for day in days]
 
         rng = np.random.default_rng()
@@ -127,11 +136,14 @@ def simulate_daily_transactions(
         df_history.loc[mask, "count"] = df_history.loc[mask, "count"].apply(
             lambda x: max(1, random.randint(1, MAX_COUNT_RECORD))
         )
+        changed_dates = df_history.loc[mask, "date"].dt.strftime("%Y-%m-%d").unique()
+        all_dates = df_history["date"].dt.strftime("%Y-%m-%d").unique()
 
+        print(f"Changed {len(df_history[mask])} records out of {len(df_history)}")
+        print(f"Changed {len(changed_dates)} days out of {len(all_dates)}")
         # save each historic file with the new counts
-        history_date = df_history["date"].dt.strftime("%Y-%m-%d").unique()
-        for date in history_date:
-            print(f"Updating historic file for date: {date}")
+        for date in changed_dates:
+            # print(f"Updating historic file for date: {date}")
             df_date = df_history[df_history["date"].dt.strftime("%Y-%m-%d") == date]
             df_date.to_csv(DATA_FOLDER / f"{FILE_PREFIX}{date}.csv", index=False)
         dfs.append(df_history)
