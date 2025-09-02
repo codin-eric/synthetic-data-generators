@@ -1,3 +1,5 @@
+"""The most basic ETL implementation for the daily data change challenge.
+"""
 import pandas as pd
 from generator import simulate_daily_transactions, ROOT_DIR
 
