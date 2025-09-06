@@ -20,6 +20,8 @@ import click
 RECORDS_PER_DAY = 100  # Number of records to generate per day
 MAX_COUNT_RECORD = 100  # Maximum count value for each record
 
+ID_FILE_POSITION = 1  # Position of the ID column in the CSV file (0-indexed)
+
 GAUSEAN_PEAKS = [9, 17]  # Example peaks for Gaussian distribution
 GAUSEAN_SIGMA = 2.0  # Standard deviation for Gaussian distribution
 
@@ -81,8 +83,15 @@ click.command()
     default=RECORDS_PER_DAY,
     help="Number of records to generate per day",
 )
+@click.option(
+    "--simulate-historic-changes",
+    default=True,
+    help="Whether to simulate changes in historic data",
+)
 def simulate_daily_transactions(
-    start_date=datetime.today().strftime("%Y-%m-%d"), records_per_day=RECORDS_PER_DAY
+    start_date=datetime.today().strftime("%Y-%m-%d"),
+    records_per_day=RECORDS_PER_DAY,
+    simulate_historic_changes=True,
 ):  # Casting date to str to avoid multiple types:
     """Simulate daily transactions and save to CSV files. If historic files exist, gather max id and max date to
     continue the sequence and randomly with log distribution update counts in historic files.
@@ -90,6 +99,7 @@ def simulate_daily_transactions(
     Args:
         start_date (str, optional): Start date of the simulation. Defaults to today.
         records_per_day (int, optional): Number of records to generate per day. Defaults to RECORDS_PER_DAY.
+        simulate_historic_changes (bool, optional): Whether to simulate changes in historic data. Defaults to True.
 
     Returns:
         str: Path to the generated CSV file.
@@ -98,60 +108,69 @@ def simulate_daily_transactions(
 
     DATA_FOLDER.mkdir(parents=True, exist_ok=True)
 
-    dfs = []
-
     base_id = 0
     # Check if there are historic files
     existing_files = list(DATA_FOLDER.glob(f"{FILE_PREFIX}*.csv"))
     if existing_files:
-        dfs_history = []
-        for historic_file in existing_files:
-            dfs_history.append(pd.read_csv(historic_file))
-        df_history = pd.concat(dfs_history, ignore_index=True)
-        df_history["date"] = pd.to_datetime(
-            df_history["date"]
-        )  # TODO: Probably this could be casted on read
+        existing_files.sort()
+        first_file = existing_files[0]
+        last_file = existing_files[-1]
 
-        base_id = df_history["id"].max()
-        start_date = df_history["date"].max() + timedelta(
+        # Get the max id by reading the last line of the last file
+        with open(last_file, "rb") as f:
+            f.seek(-2, 2)  # Jump to the second last byte.
+            while f.read(1) != b"\n":  # Until EOL is found...
+                f.seek(-2, 1)
+            last_line = f.readline().decode()  # Read last line.
+        base_id = int(last_line.split(",")[ID_FILE_POSITION]) + 1
+
+        first_date_str = first_file.stem.replace(FILE_PREFIX, "")
+        first_date = datetime.strptime(first_date_str, "%Y-%m-%d")
+        last_date_str = last_file.stem.replace(FILE_PREFIX, "")
+        last_date = datetime.strptime(last_date_str, "%Y-%m-%d")
+
+        # Start date for the new data
+        start_date = last_date + timedelta(
             days=1
         )  # next day after the last record in history
         start_date = start_date.replace(
             hour=0, minute=0, second=0, microsecond=0
         )  # reset HMS to not have issues with the random time generation
-        # print(f"new max_date: {start_date}")
+
         # change counts in the historic df with a Sigmoid distribution
-        days = (df_history["date"] - df_history["date"].min()).dt.days
-        days_ammount = (df_history["date"].max() - df_history["date"].min()).days + 1
-        if days_ammount < SIGMOID_MIDDLE_POINT_MIN_DAYS:
-            middle_point = days_ammount / 2
-        else:
-            middle_point = days_ammount - SIGMOID_MIDDLE_POINT_DAYS
+        if simulate_historic_changes:
+            days_ammount = (last_date - first_date).days + 1
+            days = range(1, days_ammount)
+            if days_ammount < SIGMOID_MIDDLE_POINT_MIN_DAYS:
+                middle_point = days_ammount / 2
+            else:
+                middle_point = days_ammount - SIGMOID_MIDDLE_POINT_DAYS
 
-        weights = [sigmoid_weight(day, middle_point=middle_point) for day in days]
+            weights = [sigmoid_weight(day, middle_point=middle_point) for day in days]
+            change_days = set(
+                random.choices(population=days, weights=weights, k=int(middle_point))
+            )
 
-        rng = np.random.default_rng()
-        mask = rng.random(size=len(df_history)) < weights
+            for date_number in change_days:
+                date = first_date + timedelta(days=date_number)
+                history_fn = f"{FILE_PREFIX}{date.strftime('%Y-%m-%d')}.csv"
+                df_history = pd.read_csv(
+                    DATA_FOLDER / history_fn,
+                    parse_dates=["date"],
+                )
+                # apply a mask to change aprox 10% of the records # TODO: this should also be a distribution
+                mask = np.random.rand(len(df_history)) < 0.1
+                df_history.loc[mask, "count"] = df_history.loc[mask, "count"].apply(
+                    lambda x: random.randint(1, MAX_COUNT_RECORD)
+                )
 
-        df_history.loc[mask, "count"] = df_history.loc[mask, "count"].apply(
-            lambda x: max(1, random.randint(1, MAX_COUNT_RECORD))
-        )
-        changed_dates = df_history.loc[mask, "date"].dt.strftime("%Y-%m-%d").unique()
-        all_dates = df_history["date"].dt.strftime("%Y-%m-%d").unique()
+                df_history.to_csv(DATA_FOLDER / history_fn, index=False)
 
-        print(f"Changed {len(df_history[mask])} records out of {len(df_history)}")
-        print(f"Changed {len(changed_dates)} days out of {len(all_dates)}")
-        # save each historic file with the new counts
-        for date in changed_dates:
-            # print(f"Updating historic file for date: {date}")
-            df_date = df_history[df_history["date"].dt.strftime("%Y-%m-%d") == date]
-            df_date.to_csv(DATA_FOLDER / f"{FILE_PREFIX}{date}.csv", index=False)
-        dfs.append(df_history)
-
+    # Create the data for the current day
     data_file = (
         ROOT_DIR / "data" / f"{FILE_PREFIX}{start_date.strftime('%Y-%m-%d')}.csv"
     )
-    # Create the data for the current day
+
     records = []
     for i in range(records_per_day):
         # using a gaussian distribution to simulate the time of day when the record is created
