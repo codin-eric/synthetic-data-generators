@@ -9,6 +9,14 @@ When you run it, a daily dataset is created under the `data/` folder.
 The challenge is to keep your **data warehouse** up to date while handling these ongoing historical changes.
 
 ---
+## Extra arguments
+
+- `--records-per-day`  
+  By default, the generator creates **100 records per day**. Use this argument to specify a different number.  
+
+- `--simulate-historic-changes`  
+  By default, historical records are modified in every run.  
+  Use this flag to **disable historical changes** (e.g., when generating a clean bulk history).
 
 ## Potential Exercises
 
