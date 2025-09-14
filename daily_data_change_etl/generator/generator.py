@@ -70,45 +70,20 @@ def sigmoid_weight(x, middle_point, max_value=SIGMOID_L, steepness=SIGMOID_K):
     return weight
 
 
-click.command()
-
-
-@click.option(
-    "--start-date",
-    default=datetime.today().strftime("%Y-%m-%d"),
-    help="Start date of the simulation in YYYY-MM-DD format",
-)
-@click.option(
-    "--records-per-day",
-    default=RECORDS_PER_DAY,
-    help="Number of records to generate per day",
-)
-@click.option(
-    "--simulate-historic-changes",
-    default=True,
-    help="Whether to simulate changes in historic data",
-)
-def simulate_daily_transactions(
-    start_date=datetime.today().strftime("%Y-%m-%d"),
-    records_per_day=RECORDS_PER_DAY,
-    simulate_historic_changes=True,
-):  # Casting date to str to avoid multiple types:
-    """Simulate daily transactions and save to CSV files. If historic files exist, gather max id and max date to
-    continue the sequence and randomly with log distribution update counts in historic files.
+def __historic_files(simulate_historic_changes):
+    """Logic that checks if there are historic files and if so, gets the max id and max date to continue the sequence.
+    If simulate_historic_changes is true, it will also modify the count of some records in historic files following a
+    Sigmoid distribution so older days dont change too much while newer days can change more.
 
     Args:
-        start_date (str, optional): Start date of the simulation. Defaults to today.
-        records_per_day (int, optional): Number of records to generate per day. Defaults to RECORDS_PER_DAY.
-        simulate_historic_changes (bool, optional): Whether to simulate changes in historic data. Defaults to True.
+        simulate_historic_changes (Bool): Whether to simulate changes in historic data
 
     Returns:
-        str: Path to the generated CSV file.
+        int : base id to continue the sequence
+        datetime | None : last date in the historic files or None if no historic files exist
     """
-    start_date = datetime.strptime(start_date, "%Y-%m-%d")
-
     DATA_FOLDER.mkdir(parents=True, exist_ok=True)
 
-    base_id = 0
     # Check if there are historic files
     existing_files = list(DATA_FOLDER.glob(f"{FILE_PREFIX}*.csv"))
     if existing_files:
@@ -129,6 +104,7 @@ def simulate_daily_transactions(
         last_date_str = last_file.stem.replace(FILE_PREFIX, "")
         last_date = datetime.strptime(last_date_str, "%Y-%m-%d")
 
+        # TODO: The actual modification logic should be agnostic of the storage logic
         # Start date for the new data
         start_date = last_date + timedelta(
             days=1
@@ -165,8 +141,50 @@ def simulate_daily_transactions(
                 )
 
                 df_history.to_csv(DATA_FOLDER / history_fn, index=False)
+        return base_id, last_date
+    return 0, None
 
+
+click.command()
+
+
+@click.option(
+    "--start-date",
+    default=datetime.today().strftime("%Y-%m-%d"),
+    help="Start date of the simulation in YYYY-MM-DD format",
+)
+@click.option(
+    "--records-per-day",
+    default=RECORDS_PER_DAY,
+    help="Number of records to generate per day",
+)
+@click.option(
+    "--simulate-historic-changes",
+    default=True,
+    help="Whether to simulate changes in historic data",
+)
+def simulate_daily_transactions(
+    start_date=datetime.today().strftime("%Y-%m-%d"),
+    records_per_day=RECORDS_PER_DAY,
+    simulate_historic_changes=True,
+):  # Casting date to str to avoid multiple types:
+    """Simulate daily transactions and save to CSV files. If historic files exist, gather max id and max date to
+    continue the sequence and randomly with log distribution update counts in historic files.
+
+    Args:
+        start_date (str, optional): Start date of the simulation. Defaults to today.
+        records_per_day (int, optional): Number of records to generate per day. Defaults to RECORDS_PER_DAY.
+        simulate_historic_changes (bool, optional): Whether to simulate changes in historic data. Defaults to True.
+
+    Returns:
+        str: Path to the generated CSV file.
+    """
+
+    base_id, historic_date = __historic_files(simulate_historic_changes)
     # Create the data for the current day
+    start_date = (
+        historic_date if historic_date else datetime.strptime(start_date, "%Y-%m-%d")
+    )
     data_file = (
         ROOT_DIR / "data" / f"{FILE_PREFIX}{start_date.strftime('%Y-%m-%d')}.csv"
     )
