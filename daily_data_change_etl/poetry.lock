@@ -659,6 +659,25 @@ files = [
 tests = ["asttokens (>=2.1.0)", "coverage", "coverage-enable-subprocess", "ipython", "littleutils", "pytest", "rich"]
 
 [[package]]
+name = "fancycompleter"
+version = "0.11.1"
+description = "colorful TAB completion for Python prompt"
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "fancycompleter-0.11.1-py3-none-any.whl", hash = "sha256:44243d7fab37087208ca5acacf8f74c0aa4d733d04d593857873af7513cdf8a6"},
+    {file = "fancycompleter-0.11.1.tar.gz", hash = "sha256:5b4ad65d76b32b1259251516d0f1cb2d82832b1ff8506697a707284780757f69"},
+]
+
+[package.dependencies]
+pyreadline3 = {version = "*", markers = "platform_system == \"Windows\" and python_version < \"3.13\""}
+pyrepl = {version = ">=0.11.3", markers = "python_version < \"3.13\""}
+
+[package.extras]
+dev = ["fancycompleter[tests]", "mypy", "ruff (==0.11.8)"]
+tests = ["pytest", "pytest-cov"]
+
+[[package]]
 name = "fastjsonschema"
 version = "2.21.2"
 description = "Fastest Python implementation of JSON schema"
@@ -1992,6 +2011,24 @@ files = [
 ]
 
 [[package]]
+name = "pdbpp"
+version = "0.11.7"
+description = "pdb++, a drop-in replacement for pdb"
+optional = false
+python-versions = "*"
+files = [
+    {file = "pdbpp-0.11.7-py3-none-any.whl", hash = "sha256:51916b63693898cf4881b36b4501c83947758d73f582f1f84893662b163bdb75"},
+    {file = "pdbpp-0.11.7.tar.gz", hash = "sha256:cb6604ac31a35ed0f2a29650a8c022b26284620be3e01cfd41b683b91da1ff14"},
+]
+
+[package.dependencies]
+fancycompleter = ">=0.11.0"
+pygments = "*"
+
+[package.extras]
+testing = ["ipython", "pexpect", "pytest", "pytest-cov"]
+
+[[package]]
 name = "pexpect"
 version = "4.9.0"
 description = "Pexpect allows easy control of interactive console applications."
@@ -2281,6 +2318,35 @@ files = [
 
 [package.extras]
 diagrams = ["jinja2", "railroad-diagrams"]
+
+[[package]]
+name = "pyreadline3"
+version = "3.5.4"
+description = "A python implementation of GNU readline."
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "pyreadline3-3.5.4-py3-none-any.whl", hash = "sha256:eaf8e6cc3c49bcccf145fc6067ba8643d1df34d604a1ec0eccbf7a18e6d3fae6"},
+    {file = "pyreadline3-3.5.4.tar.gz", hash = "sha256:8d57d53039a1c75adba8e50dd3d992b28143480816187ea5efbd5c78e6c885b7"},
+]
+
+[package.extras]
+dev = ["build", "flake8", "mypy", "pytest", "twine"]
+
+[[package]]
+name = "pyrepl"
+version = "0.11.4"
+description = "A library for building flexible command line interfaces"
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "pyrepl-0.11.4-py3-none-any.whl", hash = "sha256:ac30d6340267a21c39e1b1934f92bca6b8735017d14b17e40f903b2d1563541d"},
+    {file = "pyrepl-0.11.4.tar.gz", hash = "sha256:efe988b4a6e5eed587e9769dc2269aeec2b6feec2f5d77995ee85b9ad7cf7063"},
+]
+
+[package.extras]
+dev = ["pyrepl[tests]", "ruff (==0.11.8)"]
+tests = ["pexpect", "pytest", "pytest-coverage", "pytest-timeout"]
 
 [[package]]
 name = "python-dateutil"
@@ -3085,5 +3151,5 @@ files = [
 
 [metadata]
 lock-version = "2.0"
-python-versions = "^3.12"
-content-hash = "0f23d9c44c81df0ed005e3c79e82e66036096efaafd40ca44735c362ee7dff0a"
+python-versions = "^3.12.6"
+content-hash = "1885cec6f53098a472d3297541f0b839dfeeb715b843cc1e44bdaddcef9aa7d8"

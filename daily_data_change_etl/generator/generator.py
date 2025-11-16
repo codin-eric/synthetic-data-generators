@@ -36,7 +36,6 @@ FOLDER_NAME = "data"
 FILE_PREFIX = "data_"
 
 ROOT_DIR = Path(__file__).parent
-DATA_FOLDER = ROOT_DIR / FOLDER_NAME
 
 
 def gaussean_weight(h):
@@ -70,7 +69,7 @@ def sigmoid_weight(x, middle_point, max_value=SIGMOID_L, steepness=SIGMOID_K):
     return weight
 
 
-def __historic_files(simulate_historic_changes):
+def __historic_files(simulate_historic_changes, data_path):
     """Logic that checks if there are historic files and if so, gets the max id and max date to continue the sequence.
     If simulate_historic_changes is true, it will also modify the count of some records in historic files following a
     Sigmoid distribution so older days dont change too much while newer days can change more.
@@ -82,10 +81,10 @@ def __historic_files(simulate_historic_changes):
         int : base id to continue the sequence
         datetime | None : last date in the historic files or None if no historic files exist
     """
-    DATA_FOLDER.mkdir(parents=True, exist_ok=True)
+    data_path.mkdir(parents=True, exist_ok=True)
 
     # Check if there are historic files
-    existing_files = list(DATA_FOLDER.glob(f"{FILE_PREFIX}*.csv"))
+    existing_files = list(data_path.glob(f"{FILE_PREFIX}*.csv"))
     if existing_files:
         existing_files.sort()
         first_file = existing_files[0]
@@ -121,17 +120,24 @@ def __historic_files(simulate_historic_changes):
                 middle_point = days_ammount / 2
             else:
                 middle_point = days_ammount - SIGMOID_MIDDLE_POINT_DAYS
-
-            weights = [sigmoid_weight(day, middle_point=middle_point) for day in days]
-            change_days = set(
-                random.choices(population=days, weights=weights, k=int(middle_point))
-            )
+            # if there are only 5 days, all days should be changed
+            if days_ammount <= 5:
+                change_days = set(days)
+            else:
+                weights = [
+                    sigmoid_weight(day, middle_point=middle_point) for day in days
+                ]
+                change_days = set(
+                    random.choices(
+                        population=days, weights=weights, k=int(middle_point)
+                    )
+                )
 
             for date_number in change_days:
                 date = first_date + timedelta(days=date_number)
                 history_fn = f"{FILE_PREFIX}{date.strftime('%Y-%m-%d')}.csv"
                 df_history = pd.read_csv(
-                    DATA_FOLDER / history_fn,
+                    data_path / history_fn,
                     parse_dates=["date"],
                 )
                 # apply a mask to change aprox 10% of the records # TODO: this should also be a distribution
@@ -140,33 +146,16 @@ def __historic_files(simulate_historic_changes):
                     lambda x: random.randint(1, MAX_COUNT_RECORD)
                 )
 
-                df_history.to_csv(DATA_FOLDER / history_fn, index=False)
-        return base_id, last_date
+                df_history.to_csv(data_path / history_fn, index=False)
+        return base_id, start_date
     return 0, None
 
 
-click.command()
-
-
-@click.option(
-    "--start-date",
-    default=datetime.today().strftime("%Y-%m-%d"),
-    help="Start date of the simulation in YYYY-MM-DD format",
-)
-@click.option(
-    "--records-per-day",
-    default=RECORDS_PER_DAY,
-    help="Number of records to generate per day",
-)
-@click.option(
-    "--simulate-historic-changes",
-    default=True,
-    help="Whether to simulate changes in historic data",
-)
 def simulate_daily_transactions(
     start_date=datetime.today().strftime("%Y-%m-%d"),
     records_per_day=RECORDS_PER_DAY,
     simulate_historic_changes=True,
+    folder_name=FOLDER_NAME,
 ):  # Casting date to str to avoid multiple types:
     """Simulate daily transactions and save to CSV files. If historic files exist, gather max id and max date to
     continue the sequence and randomly with log distribution update counts in historic files.
@@ -175,19 +164,19 @@ def simulate_daily_transactions(
         start_date (str, optional): Start date of the simulation. Defaults to today.
         records_per_day (int, optional): Number of records to generate per day. Defaults to RECORDS_PER_DAY.
         simulate_historic_changes (bool, optional): Whether to simulate changes in historic data. Defaults to True.
+        folder_name (str, optional): Folder name to save the data files. Defaults to FOLDER_NAME.
 
     Returns:
         str: Path to the generated CSV file.
     """
 
-    base_id, historic_date = __historic_files(simulate_historic_changes)
+    data_path = ROOT_DIR / folder_name
+    base_id, historic_date = __historic_files(simulate_historic_changes, data_path)
     # Create the data for the current day
     start_date = (
         historic_date if historic_date else datetime.strptime(start_date, "%Y-%m-%d")
     )
-    data_file = (
-        ROOT_DIR / "data" / f"{FILE_PREFIX}{start_date.strftime('%Y-%m-%d')}.csv"
-    )
+    data_file = data_path / f"{FILE_PREFIX}{start_date.strftime('%Y-%m-%d')}.csv"
 
     records = []
     for i in range(records_per_day):
@@ -214,5 +203,33 @@ def simulate_daily_transactions(
     return data_file
 
 
+@click.command()
+@click.option(
+    "--start-date",
+    default=datetime.today().strftime("%Y-%m-%d"),
+    help="Start date of the simulation in YYYY-MM-DD format",
+)
+@click.option(
+    "--records-per-day",
+    default=RECORDS_PER_DAY,
+    help="Number of records to generate per day",
+)
+@click.option(
+    "--simulate-historic-changes",
+    default=True,
+    help="Whether to simulate changes in historic data",
+)
+@click.option(
+    "--folder-name",
+    default=FOLDER_NAME,
+    help="Folder name to save the data files",
+)
+def main(start_date, records_per_day, simulate_historic_changes, folder_name):
+    """Click entrypoint"""
+    simulate_daily_transactions(
+        start_date, records_per_day, simulate_historic_changes, folder_name
+    )
+
+
 if __name__ == "__main__":
-    simulate_daily_transactions()
+    main()
