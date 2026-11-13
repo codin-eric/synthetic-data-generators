@@ -83,4 +83,4 @@ uv run pytest -q
 ## Community
 
 Questions and solutions go on the
-[Discord](https://discord.com/invite/GREKfe7).
+[Discord](https://discord.com/invite/GREKfe7), a Spanish-speaking community.

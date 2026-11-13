@@ -14,7 +14,7 @@ This project is not aimed at **data analysis, business intelligence, or data sci
 Inside each folder you will find a data challenge with a generator and explanation on how to use it.
 
 ## Community
-Join the [Discord](https://discord.com/invite/GREKfe7) to discuss challenges and share solutions.
+Join the [Discord](https://discord.com/invite/GREKfe7) to discuss challenges and share solutions. The community is Spanish-speaking.
 
 ## Roadmap
 - Add more real-world scenarios
