@@ -1,0 +1,41 @@
+name: Improvement
+description: Propose a change to a challenge or the repo docs, or a new challenge.
+labels: [enhancement]
+body:
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Challenge README
+        - Challenge generator
+        - Repo docs
+        - New challenge idea
+    validations:
+      required: true
+  - type: input
+    id: challenge
+    attributes:
+      label: Challenge
+      description: Folder name, or `none`.
+    validations:
+      required: true
+  - type: textarea
+    id: what_and_why
+    attributes:
+      label: What and why
+      description: The problem today and the change you propose.
+    validations:
+      required: true
+  - type: dropdown
+    id: output_change
+    attributes:
+      label: Would generator output for a given `--seed` change?
+      description: Output changes break published solutions.
+      options:
+        - "No"
+        - "Yes"
+        - Not sure
+        - Not a generator change
+    validations:
+      required: true
