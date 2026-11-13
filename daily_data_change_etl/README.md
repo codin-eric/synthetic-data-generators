@@ -80,7 +80,12 @@ The generator's own tests (determinism, schema, `validate`) run offline:
 uv run pytest -q
 ```
 
+## Solutions
+
+Community solutions live in `solutions/`, one folder per author. They contain spoilers: try the challenge first. To add yours, read
+[CONTRIBUTING.md](../CONTRIBUTING.md).
+
 ## Community
 
-Questions and solutions go on the
+Questions and discussion go on the
 [Discord](https://discord.com/invite/GREKfe7), a Spanish-speaking community.

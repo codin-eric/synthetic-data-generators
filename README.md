@@ -3,7 +3,7 @@ SDG is a collection of common data challenges aimed at practicing and learning D
 Each generator simulates data behaviors modeled on real-life scenarios.
 
 
-This is V0.1 of the open source project. In future I'd like to have an iniciative for people to contribute with new cases and potential solutions.
+This is V0.1 of the open source project. To contribute a solution, report a bug or propose an improvement, read [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Goal
 The goal of this project is to provide generators that help test and practice common **data engineering challenges**.  
@@ -11,7 +11,7 @@ The goal of this project is to provide generators that help test and practice co
 This project is not aimed at **data analysis, business intelligence, or data science** challenges. 
 
 ## Project structure 
-Inside each folder you will find a data challenge with a generator and explanation on how to use it.
+Inside each folder you will find a data challenge with a generator and an explanation of how to use it.
 
 ## Community
 Join the [Discord](https://discord.com/invite/GREKfe7) to discuss challenges and share solutions. The community is Spanish-speaking.
